@@ -56,7 +56,7 @@ module "vpc_connector" {
   project_id            = var.project_id
   env_name              = var.env_name
   region                = var.region
-  connector_subnet_name = "shared-${var.env_name}"
+  connector_subnet_name = "vpc-connector-${var.env_name}"
   min_instances         = 2
   max_instances         = 3
   machine_type          = "e2-micro"
