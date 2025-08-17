@@ -43,6 +43,16 @@ output "database_dns_fqdn" {
   value       = "sql-server.database.${var.network.name}.internal"
 }
 
+output "database_dns_short" {
+  description = "Short DNS name for database access (recommended for Cloud Run)."
+  value       = "db.database.${var.network.name}.internal"
+}
+
+output "database_dns_simple" {
+  description = "Simple DNS name for database access (shortest option)."
+  value       = "sqlserver.database.${var.network.name}.internal"
+}
+
 output "database_zone_name" {
   description = "The private DNS zone name for database access."
   value       = module.network.database_zone_name

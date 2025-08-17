@@ -61,3 +61,29 @@ resource "google_dns_record_set" "database_dns" {
 
   depends_on = [module.network, module.psc_endpoint]
 }
+
+# Short DNS name for easy access from Cloud Run and other services
+resource "google_dns_record_set" "database_short_dns" {
+  name         = "db.database.${var.network.name}.internal."
+  managed_zone = module.network.database_zone_name
+  type         = "A"
+  ttl          = 300
+  project      = var.project_id
+
+  rrdatas = [module.psc_endpoint.psc_ip_address]
+
+  depends_on = [module.network, module.psc_endpoint]
+}
+
+# Even shorter DNS name for maximum convenience
+resource "google_dns_record_set" "database_simple_dns" {
+  name         = "sqlserver.database.${var.network.name}.internal."
+  managed_zone = module.network.database_zone_name
+  type         = "A"
+  ttl          = 300
+  project      = var.project_id
+
+  rrdatas = [module.psc_endpoint.psc_ip_address]
+
+  depends_on = [module.network, module.psc_endpoint]
+}
