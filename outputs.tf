@@ -3,6 +3,11 @@ output "vpc_id" {
   value       = module.network.vpc_id
 }
 
+output "enabled_apis" {
+  description = "List of enabled GCP APIs."
+  value       = module.project_apis.enabled_apis
+}
+
 output "vpc_self_link" {
   description = "The self link of the VPC network."
   value       = module.network.vpc_self_link

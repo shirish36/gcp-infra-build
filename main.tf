@@ -1,9 +1,16 @@
+module "project_apis" {
+  source     = "./modules/project_apis"
+  project_id = var.project_id
+}
+
 module "network" {
   source     = "./modules/network"
   project_id = var.project_id
   network    = var.network
   region     = var.region
   labels     = var.labels
+
+  depends_on = [module.project_apis]
 }
 
 module "gcs_bucket" {
@@ -13,6 +20,8 @@ module "gcs_bucket" {
   storage_class = "STANDARD"
   force_destroy = false
   labels        = var.labels
+
+  depends_on = [module.project_apis]
 }
 
 module "cloud_sql" {
@@ -25,6 +34,8 @@ module "cloud_sql" {
   root_password    = var.cloud_sql.root_password
   disk_size        = 100
   disk_type        = "PD_SSD"
+
+  depends_on = [module.project_apis]
 }
 
 module "psc_endpoint" {
@@ -47,4 +58,6 @@ resource "google_dns_record_set" "database_dns" {
   project      = var.project_id
 
   rrdatas = [module.psc_endpoint.psc_ip_address]
+
+  depends_on = [module.network, module.psc_endpoint]
 }
