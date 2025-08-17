@@ -19,7 +19,6 @@ jobs:
       matrix:
         env:
           - dev
-          - prod
     defaults:
       run:
         shell: bash
