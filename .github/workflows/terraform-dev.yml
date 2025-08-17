@@ -1,0 +1,47 @@
+name: Terraform Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  terraform:
+    name: 'Terraform Plan and Apply (Dev)'
+    runs-on: ubuntu-latest
+  # environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.3.0
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: environments/dev
+
+      - name: Terraform Format
+        run: terraform fmt -check
+        working-directory: environments/dev
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: environments/dev
+
+      - name: Terraform Plan
+        run: terraform plan -input=false
+        working-directory: environments/dev
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false
+        working-directory: environments/dev
+
+      # Add GCP authentication step here if using service account JSON
+      # - name: Authenticate to Google Cloud
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
