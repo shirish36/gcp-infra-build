@@ -52,15 +52,15 @@ module "psc_endpoint" {
 
 # VPC Connector for Cloud Run to access private resources
 module "vpc_connector" {
-  source                 = "./modules/vpc_connector"
-  project_id             = var.project_id
-  env_name               = var.env_name
-  region                 = var.region
-  vpc_id                 = module.network.vpc_id
-  connector_subnet_name  = "shared-${var.env_name}"
-  min_instances          = 2
-  max_instances          = 3
-  machine_type           = "e2-micro"
+  source                = "./modules/vpc_connector"
+  project_id            = var.project_id
+  env_name              = var.env_name
+  region                = var.region
+  vpc_id                = module.network.vpc_id
+  connector_subnet_name = "shared-${var.env_name}"
+  min_instances         = 2
+  max_instances         = 3
+  machine_type          = "e2-micro"
 
   depends_on = [module.network, module.project_apis]
 }
