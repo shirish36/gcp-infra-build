@@ -15,10 +15,6 @@ jobs:
   terraform:
     name: 'Terraform Plan and Apply'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        env:
-          - dev
     defaults:
       run:
         shell: bash
@@ -46,13 +42,9 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform Plan
-        run: terraform plan -var-file=environments/${{ matrix.env }}/terraform.tfvars -input=false -lock-timeout=10m
+      - name: Terraform Plan (Development)
+        run: terraform plan -var-file=environments/dev/terraform.tfvars -input=false -lock-timeout=10m
 
-      - name: Terraform Apply (Manual for prod)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.env == 'prod'
-        run: terraform apply -auto-approve -var-file=environments/prod/terraform.tfvars -input=false -lock-timeout=10m
-
-      - name: Terraform Apply (Auto for dev)
-        if: github.ref == 'refs/heads/feature-exp' && github.event_name == 'push' && matrix.env == 'dev'
+      - name: Terraform Apply (Development)
+        if: github.ref == 'refs/heads/feature-exp' && github.event_name == 'push'
         run: terraform apply -auto-approve -var-file=environments/dev/terraform.tfvars -input=false -lock-timeout=10m
