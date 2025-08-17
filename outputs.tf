@@ -38,6 +38,9 @@ output "psc_dns_name" {
   value       = module.psc_endpoint.psc_dns_name
 }
 
+# DNS zone outputs commented out due to permission issues
+# Use PSC endpoint IP for direct database connections
+/*
 output "database_dns_fqdn" {
   description = "The FQDN for database access via DNS."
   value       = "sql-server.database.${var.network.name}.internal"
@@ -47,6 +50,7 @@ output "database_zone_name" {
   description = "The private DNS zone name for database access."
   value       = module.network.database_zone_name
 }
+*/
 
 output "gcs_bucket_name" {
   description = "The name of the GCS bucket."

@@ -38,7 +38,10 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   reserved_peering_ranges = [google_compute_global_address.private_ip_range.name]
 }
 
-# Private DNS zone for database resolution
+# Private DNS zone for database resolution - COMMENTED OUT DUE TO PERMISSION ISSUES
+# Requires DNS Administrator role on service account
+# Alternative: Use PSC endpoint IP directly for database connections
+/*
 resource "google_dns_managed_zone" "database_zone" {
   name        = "${var.network.name}-database-zone"
   dns_name    = "database.${var.network.name}.internal."
@@ -55,3 +58,4 @@ resource "google_dns_managed_zone" "database_zone" {
 
   labels = var.labels
 }
+*/
