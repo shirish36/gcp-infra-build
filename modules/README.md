@@ -1,6 +1,6 @@
 # Terraform Modules
 
-## 🏗️ Infrastructure Modules
+## 🏗️ Infrastructure Modules (step 1)
 
 - `gcs_bucket/`: GCP Storage Bucket for state management
 - `cloud_sql/`: Cloud SQL for SQL Server (PSC enabled)
