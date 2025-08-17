@@ -1,20 +1,21 @@
-output "endpoint_ip" {
-	value = google_compute_address.psc_ip.address
-}
-
-output "psc_connection_status" {
-	value = google_compute_forwarding_rule.consumer_endpoint.psc_connection_status
-}
-
-output "psc_connection_id" {
-	value = google_compute_forwarding_rule.consumer_endpoint.psc_connection_id
-}
 output "vpc_id" {
-	description = "The ID of the VPC."
-	value       = google_compute_network.vpc.id
+  description = "The ID of the VPC."
+  value       = google_compute_network.vpc.id
 }
 
-output "subnet_id" {
-	description = "The ID of the subnet."
-	value       = google_compute_subnetwork.subnet.id
+output "vpc_self_link" {
+  description = "The self link of the VPC."
+  value       = google_compute_network.vpc.self_link
+}
+
+output "subnets" {
+  description = "Map of subnet names to their details."
+  value = {
+    for subnet in google_compute_subnetwork.subnets :
+    subnet.name => {
+      id        = subnet.id
+      self_link = subnet.self_link
+      region    = subnet.region
+    }
+  }
 }

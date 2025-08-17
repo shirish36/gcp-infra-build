@@ -34,39 +34,31 @@ variable "labels" {
 	default     = {}
 }
 variable "project_id" {
-	description = "The GCP project ID."
-	type        = string
+  description = "The GCP project ID."
+  type        = string
 }
 
-variable "vpc_name" {
-	description = "The name of the VPC."
-	type        = string
-}
-
-variable "vpc_description" {
-	description = "Description for the VPC."
-	type        = string
-	default     = "VPC for GCP infrastructure."
-}
-
-variable "subnet_name" {
-	description = "The name of the subnet."
-	type        = string
-}
-
-variable "subnet_cidr" {
-	description = "The CIDR range for the subnet."
-	type        = string
+variable "network" {
+  description = "Network configuration including name, routing mode and subnets."
+  type = object({
+    name         = string
+    routing_mode = string
+    subnets = list(object({
+      name          = string
+      ip_cidr_range = string
+      region        = string
+    }))
+  })
 }
 
 variable "region" {
-	description = "The region for the subnet."
-	type        = string
-	default     = "us-central1"
+  description = "The region for the subnet."
+  type        = string
+  default     = "us-central1"
 }
 
-variable "subnet_description" {
-	description = "Description for the subnet."
-	type        = string
-	default     = "Subnet for GCP infrastructure."
+variable "labels" {
+  description = "Labels to apply to network resources."
+  type        = map(string)
+  default     = {}
 }

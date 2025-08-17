@@ -1,12 +1,9 @@
 module "network" {
   source             = "./modules/network"
   project_id         = var.project_id
-  vpc_name           = "main-vpc"
-  vpc_description    = "Main VPC"
-  subnet_name        = "main-subnet"
-  subnet_cidr        = "10.30.0.0/24"
+  network            = var.network
   region             = var.region
-  subnet_description = "Main subnet"
+  labels             = var.labels
 }
 
 module "gcs_bucket" {
@@ -15,17 +12,17 @@ module "gcs_bucket" {
   location      = var.region
   storage_class = "STANDARD"
   force_destroy = false
-  labels        = { env = "tfstate" }
+  labels        = var.labels
 }
 
 module "cloud_sql" {
   source           = "./modules/cloud_sql"
   project_id       = var.project_id
-  instance_name    = "main-sql-instance"
+  instance_name    = var.cloud_sql.instance_name
   database_version = "SQLSERVER_2019_STANDARD"
   region           = var.region
-  tier             = "db-custom-2-3840"
-  private_network  = module.network.vpc_id
+  tier             = var.cloud_sql.tier
+  private_network  = module.network.vpc_self_link
   disk_size        = 100
   disk_type        = "PD_SSD"
 }

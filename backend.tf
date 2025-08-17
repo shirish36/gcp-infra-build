@@ -5,7 +5,3 @@ terraform {
   }
 }
 
-variable "env_name" {
-  description = "The environment name (e.g., dev, prod) for state separation."
-  type        = string
-}
