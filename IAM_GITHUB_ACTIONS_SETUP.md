@@ -1,15 +1,21 @@
-# IAM Configuration for GitHub Actions
+# IAM Configuration for GitHub Actions - MANUAL SETUP REQUIRED
 
-## 🔐 Service Account Setup
+## � Important: Manual Setup Required
+
+The GitHub Actions service account needs specific IAM permissions to deploy infrastructure, but these permissions **CANNOT** be granted via Terraform because of a chicken-and-egg problem: the service account needs IAM admin permissions to grant itself other permissions.
+
+**These permissions must be set up manually by a project owner/admin BEFORE running the CI/CD pipeline.**
+
+## � Service Account Details
 
 The GitHub Actions workflow uses Workload Identity Federation to authenticate to Google Cloud using the service account:
 ```
 githubaction@gifted-palace-468618-q5.iam.gserviceaccount.com
 ```
 
-## 🛡️ Required IAM Roles
+## 🛡️ Required IAM Roles - MANUAL SETUP
 
-The following IAM roles are automatically assigned to the GitHub Actions service account by Terraform:
+The following IAM roles must be manually assigned to the GitHub Actions service account by a project owner/admin:
 
 ### 1. VPC Access Admin (`roles/vpcaccess.admin`)
 - **Purpose**: Create and manage VPC Access Connectors for Cloud Run
@@ -34,51 +40,62 @@ The following IAM roles are automatically assigned to the GitHub Actions service
   - `serviceusage.services.get`
   - `serviceusage.services.list`
 
-## 🏗️ Implementation
+## 🔧 REQUIRED: Manual Setup Commands
 
-The IAM configuration is implemented in `main.tf`:
+**A project owner/admin must run these commands to grant the necessary permissions:**
 
-```hcl
-# IAM configuration for GitHub Actions service account
-resource "google_project_iam_member" "github_actions_vpc_access_admin" {
-  project = var.project_id
-  role    = "roles/vpcaccess.admin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-  depends_on = [module.project_apis]
-}
+```bash
+# Set project ID
+export PROJECT_ID="gifted-palace-468618-q5"
 
-resource "google_project_iam_member" "github_actions_compute_admin" {
-  project = var.project_id
-  role    = "roles/compute.admin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-  depends_on = [module.project_apis]
-}
+# Grant VPC Access Admin role
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:githubaction@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/vpcaccess.admin"
 
-resource "google_project_iam_member" "github_actions_service_usage_admin" {
-  project = var.project_id
-  role    = "roles/serviceusage.serviceUsageAdmin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-  depends_on = [module.project_apis]
-}
+# Grant Compute Admin role  
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:githubaction@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/compute.admin"
+
+# Grant Service Usage Admin role
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:githubaction@${PROJECT_ID}.iam.gserviceaccount.com" \
+  --role="roles/serviceusage.serviceUsageAdmin"
+
+# Verify the roles were assigned
+gcloud projects get-iam-policy $PROJECT_ID \
+  --flatten="bindings[].members" \
+  --filter="bindings.members:githubaction@${PROJECT_ID}.iam.gserviceaccount.com"
 ```
 
-## 🔄 Dependency Management
+## ⚠️ Why Manual Setup is Required
 
-The VPC connector module explicitly depends on these IAM configurations:
+Terraform cannot grant these permissions because:
+1. The service account needs IAM admin permissions to modify IAM policies
+2. But the service account doesn't have IAM admin permissions initially
+3. This creates a chicken-and-egg bootstrap problem
+4. Manual setup by a project owner/admin breaks this cycle
+
+## 🔄 Post-Setup Verification
+
+After manual setup, the VPC connector will be deployed automatically via Terraform:
 
 ```hcl
-depends_on = [
-  module.network, 
-  module.project_apis, 
-  google_project_iam_member.github_actions_vpc_access_admin,
-  google_project_iam_member.github_actions_compute_admin
-]
+# VPC Connector module in main.tf
+module "vpc_connector" {
+  source                = "./modules/vpc_connector"
+  project_id            = var.project_id
+  env_name              = var.env_name
+  region                = var.region
+  connector_subnet_name = "shared-${var.env_name}"
+  min_instances         = 2
+  max_instances         = 3
+  machine_type          = "e2-micro"
+  
+  depends_on = [module.network, module.project_apis]
+}
 ```
-
-This ensures that:
-1. APIs are enabled first
-2. IAM permissions are granted 
-3. VPC connector is created with proper permissions
 
 ## 🚨 Security Notes
 
@@ -109,9 +126,9 @@ If you encounter permission errors:
    gcloud services list --enabled --filter="name:vpcaccess.googleapis.com"
    ```
 
-## 📋 Manual Setup (If Needed)
+## 📋 Manual Setup (Required Before CI/CD)
 
-If the IAM configuration needs to be set up manually:
+**These commands MUST be run by a project owner/admin before the first deployment:**
 
 ```bash
 # Grant VPC Access Admin role
@@ -129,6 +146,8 @@ gcloud projects add-iam-policy-binding gifted-palace-468618-q5 \
   --member="serviceAccount:githubaction@gifted-palace-468618-q5.iam.gserviceaccount.com" \
   --role="roles/serviceusage.serviceUsageAdmin"
 ```
+
+**After running these commands, the CI/CD pipeline will work successfully.**
 
 ---
 

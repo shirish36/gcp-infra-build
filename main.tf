@@ -3,31 +3,6 @@ module "project_apis" {
   project_id = var.project_id
 }
 
-# IAM configuration for GitHub Actions service account
-resource "google_project_iam_member" "github_actions_vpc_access_admin" {
-  project = var.project_id
-  role    = "roles/vpcaccess.admin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-
-  depends_on = [module.project_apis]
-}
-
-resource "google_project_iam_member" "github_actions_compute_admin" {
-  project = var.project_id
-  role    = "roles/compute.admin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-
-  depends_on = [module.project_apis]
-}
-
-resource "google_project_iam_member" "github_actions_service_usage_admin" {
-  project = var.project_id
-  role    = "roles/serviceusage.serviceUsageAdmin"
-  member  = "serviceAccount:githubaction@${var.project_id}.iam.gserviceaccount.com"
-
-  depends_on = [module.project_apis]
-}
-
 module "network" {
   source        = "./modules/network"
   project_id    = var.project_id
@@ -86,12 +61,7 @@ module "vpc_connector" {
   max_instances         = 3
   machine_type          = "e2-micro"
 
-  depends_on = [
-    module.network,
-    module.project_apis,
-    google_project_iam_member.github_actions_vpc_access_admin,
-    google_project_iam_member.github_actions_compute_admin
-  ]
+  depends_on = [module.network, module.project_apis]
 }
 
 # DNS record for database access
