@@ -23,7 +23,17 @@ module "cloud_sql" {
   region           = var.region
   tier             = var.cloud_sql.tier
   root_password    = var.cloud_sql.root_password
-  private_network  = module.network.vpc_self_link
   disk_size        = 100
   disk_type        = "PD_SSD"
+}
+
+module "psc_endpoint" {
+  source                      = "./modules/psc_endpoint"
+  project_id                  = var.project_id
+  region                      = var.region
+  psc_ip_name                 = "psc-ip-${var.env_name}"
+  psc_endpoint_name           = "psc-endpoint-${var.env_name}"
+  network_id                  = module.network.vpc_id
+  subnetwork_id               = module.network.subnets["db-${var.env_name}"].id
+  psc_service_attachment_link = module.cloud_sql.psc_service_attachment_link
 }

@@ -17,9 +17,11 @@ resource "google_sql_database_instance" "this" {
   settings {
     tier = var.tier
     ip_configuration {
-      private_network = var.private_network
-      ipv4_enabled    = false
-      # PSC is enabled by using private_network. No psc_enabled attribute in provider.
+      ipv4_enabled = false
+      psc_config {
+        psc_enabled               = true
+        allowed_consumer_projects = [var.project_id]
+      }
     }
     disk_size = var.disk_size
     disk_type = var.disk_type

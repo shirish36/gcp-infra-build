@@ -24,11 +24,6 @@ variable "tier" {
   type        = string
 }
 
-variable "private_network" {
-  description = "The VPC network self link for PSC."
-  type        = string
-}
-
 variable "disk_size" {
   description = "The size of data disk in GB."
   type        = number
