@@ -68,6 +68,21 @@ output "custom_domain_zone_name" {
   value       = module.network.custom_domain_zone_name
 }
 
+output "vpc_connector_id" {
+  description = "The ID of the VPC Access connector for Cloud Run."
+  value       = module.vpc_connector.connector_id
+}
+
+output "vpc_connector_name" {
+  description = "The name of the VPC Access connector for Cloud Run."
+  value       = module.vpc_connector.connector_name
+}
+
+output "vpc_connector_self_link" {
+  description = "The self link of the VPC Access connector for Cloud Run."
+  value       = module.vpc_connector.connector_self_link
+}
+
 output "gcs_bucket_name" {
   description = "The name of the GCS bucket."
   value       = module.gcs_bucket.bucket_name

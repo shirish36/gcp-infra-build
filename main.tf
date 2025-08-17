@@ -50,6 +50,21 @@ module "psc_endpoint" {
   psc_service_attachment_link = module.cloud_sql.psc_service_attachment_link
 }
 
+# VPC Connector for Cloud Run to access private resources
+module "vpc_connector" {
+  source                 = "./modules/vpc_connector"
+  project_id             = var.project_id
+  env_name               = var.env_name
+  region                 = var.region
+  vpc_id                 = module.network.vpc_id
+  connector_subnet_name  = "shared-${var.env_name}"
+  min_instances          = 2
+  max_instances          = 3
+  machine_type           = "e2-micro"
+
+  depends_on = [module.network, module.project_apis]
+}
+
 # DNS record for database access
 resource "google_dns_record_set" "database_dns" {
   name         = "sql-server.database.${var.network.name}.internal."

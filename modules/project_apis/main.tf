@@ -17,6 +17,7 @@ resource "google_project_service" "required_apis" {
     "storage.googleapis.com",              # Cloud Storage API
     "iam.googleapis.com",                  # Identity and Access Management API
     "cloudresourcemanager.googleapis.com", # Cloud Resource Manager API
+    "vpcaccess.googleapis.com",            # VPC Access API for Cloud Run
   ])
 
   project = var.project_id
