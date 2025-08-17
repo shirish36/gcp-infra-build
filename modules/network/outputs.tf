@@ -19,3 +19,13 @@ output "subnets" {
     }
   }
 }
+
+output "database_zone_name" {
+  description = "The name of the private DNS zone for database access."
+  value       = google_dns_managed_zone.database_zone.name
+}
+
+output "database_zone_dns_name" {
+  description = "The DNS name of the private zone for database access."
+  value       = google_dns_managed_zone.database_zone.dns_name
+}

@@ -37,3 +37,14 @@ module "psc_endpoint" {
   subnetwork_id               = module.network.subnets["db-${var.env_name}"].id
   psc_service_attachment_link = module.cloud_sql.psc_service_attachment_link
 }
+
+# DNS record for database access
+resource "google_dns_record_set" "database_dns" {
+  name         = "sql-server.database.${var.network.name}.internal."
+  managed_zone = module.network.database_zone_name
+  type         = "A"
+  ttl          = 300
+  project      = var.project_id
+
+  rrdatas = [module.psc_endpoint.psc_ip_address]
+}
