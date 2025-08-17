@@ -14,8 +14,7 @@ on:
         type: choice
         options:
         - dev
-        - prod
-
+        
 permissions:
   id-token: write
   contents: read
