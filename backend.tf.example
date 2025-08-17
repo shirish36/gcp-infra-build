@@ -1,0 +1,8 @@
+# Example backend configuration for remote state
+# Uncomment and configure for your backend (e.g., GCS bucket)
+# terraform {
+#   backend "gcs" {
+#     bucket  = "your-tf-state-bucket"
+#     prefix  = "terraform/state"
+#   }
+# }
