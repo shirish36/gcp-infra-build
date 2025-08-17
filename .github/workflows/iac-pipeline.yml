@@ -54,5 +54,5 @@ jobs:
         run: terraform apply -auto-approve -var-file=environments/prod/terraform.tfvars -input=false
 
       - name: Terraform Apply (Auto for dev)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push' && matrix.env == 'dev'
+        if: github.ref == 'refs/heads/feature-exp' && github.event_name == 'push' && matrix.env == 'dev'
         run: terraform apply -auto-approve -var-file=environments/dev/terraform.tfvars -input=false
