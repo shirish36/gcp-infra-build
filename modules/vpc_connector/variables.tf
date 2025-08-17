@@ -14,11 +14,6 @@ variable "region" {
   default     = "us-central1"
 }
 
-variable "vpc_id" {
-  description = "The VPC network ID where the connector will be created."
-  type        = string
-}
-
 variable "connector_subnet_name" {
   description = "The name of the subnet for the VPC connector."
   type        = string

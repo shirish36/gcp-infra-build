@@ -2,7 +2,6 @@ resource "google_vpc_access_connector" "cloud_run_connector" {
   name    = "vpc-connector-${var.env_name}"
   project = var.project_id
   region  = var.region
-  network = var.vpc_id
 
   # Use the shared services subnet for VPC connector
   subnet {

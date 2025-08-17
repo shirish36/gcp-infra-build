@@ -56,7 +56,6 @@ module "vpc_connector" {
   project_id            = var.project_id
   env_name              = var.env_name
   region                = var.region
-  vpc_id                = module.network.vpc_id
   connector_subnet_name = "shared-${var.env_name}"
   min_instances         = 2
   max_instances         = 3
