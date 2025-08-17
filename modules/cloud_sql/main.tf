@@ -12,6 +12,7 @@ resource "google_sql_database_instance" "this" {
   database_version = var.database_version
   region           = var.region
   project          = var.project_id
+  root_password    = var.root_password
 
   settings {
     tier = var.tier

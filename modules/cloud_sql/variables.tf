@@ -40,3 +40,9 @@ variable "disk_type" {
   type        = string
   default     = "PD_SSD"
 }
+
+variable "root_password" {
+  description = "The root password for the SQL Server instance."
+  type        = string
+  sensitive   = true
+}

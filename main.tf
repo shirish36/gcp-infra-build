@@ -22,6 +22,7 @@ module "cloud_sql" {
   database_version = "SQLSERVER_2019_STANDARD"
   region           = var.region
   tier             = var.cloud_sql.tier
+  root_password    = var.cloud_sql.root_password
   private_network  = module.network.vpc_self_link
   disk_size        = 100
   disk_type        = "PD_SSD"

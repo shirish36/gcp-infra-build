@@ -19,4 +19,5 @@ network = {
 cloud_sql = {
   instance_name = "sql-std-prod"
   tier          = "db-custom-4-7680"
+  root_password = "Pr0dSecureP@ssw0rd456!"
 }

@@ -38,5 +38,7 @@ variable "cloud_sql" {
   type = object({
     instance_name = string
     tier          = string
+    root_password = string
   })
+  sensitive = true
 }

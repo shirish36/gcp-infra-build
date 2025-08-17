@@ -1,3 +1,23 @@
 # Example variable values for Terraform
 project_id = "your-gcp-project-id"
 region     = "us-central1"
+
+labels = { env = "example", owner = "platform" }
+
+network = {
+  name         = "vpc-core-example"
+  routing_mode = "GLOBAL"
+  subnets = [
+    { name = "dmz-example", ip_cidr_range = "10.0.0.0/24", region = "us-central1" },
+    { name = "web-example", ip_cidr_range = "10.0.1.0/24", region = "us-central1" },
+    { name = "app-example", ip_cidr_range = "10.0.2.0/24", region = "us-central1" },
+    { name = "db-example", ip_cidr_range = "10.0.3.0/24", region = "us-central1" },
+    { name = "shared-example", ip_cidr_range = "10.0.4.0/24", region = "us-central1" }
+  ]
+}
+
+cloud_sql = {
+  instance_name = "sql-std-example"
+  tier          = "db-custom-2-4096"
+  root_password = "YourSecureP@ssw0rd123!"
+}
