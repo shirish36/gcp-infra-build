@@ -1,9 +1,9 @@
 module "network" {
-  source             = "./modules/network"
-  project_id         = var.project_id
-  network            = var.network
-  region             = var.region
-  labels             = var.labels
+  source     = "./modules/network"
+  project_id = var.project_id
+  network    = var.network
+  region     = var.region
+  labels     = var.labels
 }
 
 module "gcs_bucket" {
