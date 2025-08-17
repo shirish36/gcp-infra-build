@@ -8,94 +8,145 @@ This guide provides all the prerequisites and configuration needed for Cloud Run
 
 The following infrastructure components are automatically created by this Terraform configuration:
 
-### 1. VPC Access Connector
+### 1. Network Topology
+```
+VPC: vpc-core-{env}
+├── dmz-{env}     (10.{env}.0.0/24) - DMZ/Load Balancer tier
+├── web-{env}     (10.{env}.1.0/24) - API services (Cloud Run)
+├── app-{env}     (10.{env}.2.0/24) - Batch applications (Cloud Run)
+├── db-{env}      (10.{env}.3.0/24) - Database tier (PSC endpoint)
+└── shared-{env}  (10.{env}.4.0/24) - Shared services (VPC connector)
+```
+
+### 2. VPC Access Connector
 - **Purpose**: Allows Cloud Run to access private VPC resources
 - **Name**: `vpc-connector-{env}`
-- **Subnet**: Uses `shared-{env}` subnet for connector instances
+- **Subnet**: Uses `shared-{env}` subnet (10.{env}.4.0/24) for connector instances
 - **Capacity**: 2-3 instances of e2-micro
+- **Access**: Enables connectivity to all VPC subnets including `db-{env}`
 
-### 2. Required APIs
-The following APIs are automatically enabled:
-- `vpcaccess.googleapis.com` - VPC Access API
-- `compute.googleapis.com` - Compute Engine API
-- `dns.googleapis.com` - Cloud DNS API
-- `sqladmin.googleapis.com` - Cloud SQL Admin API
-
-### 3. DNS Infrastructure
-- **Custom DNS Zone**: `myorg.com` (private)
-- **Database Record**: `mydb.myorg.com` → PSC endpoint IP
-- **Internal Resolution**: Only accessible within VPC
+### 3. Database PSC Endpoint
+- **Location**: `db-{env}` subnet (10.{env}.3.0/24)
+- **Purpose**: Private Service Connect endpoint for Cloud SQL
+- **IP Range**: Allocated from `db-{env}` subnet
+- **Access**: Reachable from `web-{env}` and `app-{env}` subnets via VPC connector
 
 ## 🚀 Cloud Run Deployment Configuration
 
-### 1. Basic Cloud Run Service with Database Access
+### 1. API Service Deployment (web-{env} subnet conceptually)
 
 ```yaml
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: my-app
+  name: api-service
   namespace: default
   labels:
-    app: my-app
+    app: api-service
+    tier: web
     env: dev
 spec:
   template:
     metadata:
       annotations:
-        # REQUIRED: VPC Access Connector
+        # REQUIRED: VPC Access Connector (deployed in shared-{env} subnet)
         run.googleapis.com/vpc-access-connector: projects/gifted-palace-468618-q5/locations/us-central1/connectors/vpc-connector-dev
-        # Optional: Route only private traffic through VPC
+        # Route only private traffic through VPC to access db-{env} subnet
         run.googleapis.com/vpc-access-egress: private-ranges-only
     spec:
       containerConcurrency: 80
       timeoutSeconds: 300
       containers:
-      - name: app
-        image: gcr.io/gifted-palace-468618-q5/my-app:latest
+      - name: api
+        image: gcr.io/gifted-palace-468618-q5/api-service:latest
         ports:
         - containerPort: 8080
         env:
-        # Database Configuration
+        # Database Configuration (connects to db-dev subnet via PSC)
         - name: DB_HOST
-          value: "mydb.myorg.com"  # Your custom domain!
+          value: "mydb.myorg.com"  # Resolves to PSC endpoint in db-dev subnet
         - name: DB_PORT
           value: "1433"
         - name: DB_NAME
-          value: "application_db"
-        - name: DB_USER
-          value: "sqlserver"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        # Application Configuration
-        - name: ENVIRONMENT
-          value: "dev"
-        - name: LOG_LEVEL
-          value: "info"
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 512Mi
-          requests:
-            cpu: 100m
-            memory: 128Mi
+          value: "api_database"
+        - name: SERVICE_TYPE
+          value: "api"
+        - name: SUBNET_CONTEXT
+          value: "web-dev"  # Logical tier identification
 ```
 
-### 2. Terraform Cloud Run Deployment
+### 2. Batch Application Deployment (app-{env} subnet conceptually)
+
+```yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: batch-processor
+  namespace: default
+  labels:
+    app: batch-processor
+    tier: app
+    env: dev
+spec:
+  template:
+    metadata:
+      annotations:
+        # REQUIRED: Same VPC connector (shared-{env} subnet)
+        run.googleapis.com/vpc-access-connector: projects/gifted-palace-468618-q5/locations/us-central1/connectors/vpc-connector-dev
+        # Private connectivity to access db-{env} subnet
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+        # Batch-specific configurations
+        autoscaling.knative.dev/maxScale: "5"
+        autoscaling.knative.dev/minScale: "0"
+    spec:
+      containerConcurrency: 1  # Process one job at a time
+      timeoutSeconds: 900      # 15 minutes for batch processing
+      containers:
+      - name: batch
+        image: gcr.io/gifted-palace-468618-q5/batch-processor:latest
+        env:
+        # Database Configuration (same PSC endpoint in db-dev subnet)
+        - name: DB_HOST
+          value: "mydb.myorg.com"  # Same database, different logical tier
+        - name: DB_PORT
+          value: "1433"
+        - name: DB_NAME
+          value: "batch_database"
+        - name: SERVICE_TYPE
+          value: "batch"
+        - name: SUBNET_CONTEXT
+          value: "app-dev"  # Logical tier identification
+        - name: BATCH_SIZE
+          value: "100"
+        resources:
+          limits:
+            cpu: 2000m     # More CPU for batch processing
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 256Mi
+```
+
+### 3. Terraform Multi-Service Deployment
 
 ```hcl
-resource "google_cloud_run_service" "app" {
-  name     = "my-app"
+# API Service (web tier)
+resource "google_cloud_run_service" "api_service" {
+  name     = "api-service"
   location = var.region
   project  = var.project_id
+
+  metadata {
+    labels = {
+      tier = "web"
+      env  = var.env_name
+    }
+  }
 
   template {
     metadata {
       annotations = {
-        # REQUIRED: Reference the VPC connector
+        # VPC connector from shared-{env} subnet to access db-{env} subnet
         "run.googleapis.com/vpc-access-connector" = module.vpc_connector.connector_id
         "run.googleapis.com/vpc-access-egress"    = "private-ranges-only"
         "autoscaling.knative.dev/maxScale"       = "10"
@@ -108,7 +159,7 @@ resource "google_cloud_run_service" "app" {
       timeout_seconds      = 300
 
       containers {
-        image = "gcr.io/${var.project_id}/my-app:latest"
+        image = "gcr.io/${var.project_id}/api-service:latest"
 
         ports {
           container_port = 8080
@@ -118,25 +169,17 @@ resource "google_cloud_run_service" "app" {
           name  = "DB_HOST"
           value = module.infrastructure.database_dns_custom  # mydb.myorg.com
         }
-
         env {
           name  = "DB_PORT"
           value = "1433"
         }
-
         env {
-          name  = "DB_NAME"
-          value = "application_db"
+          name  = "SERVICE_TYPE"
+          value = "api"
         }
-
         env {
-          name = "DB_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret_version.db_password.secret
-              key  = "latest"
-            }
-          }
+          name  = "SUBNET_CONTEXT"
+          value = "web-${var.env_name}"
         }
 
         resources {
@@ -144,38 +187,91 @@ resource "google_cloud_run_service" "app" {
             cpu    = "1000m"
             memory = "512Mi"
           }
-          requests = {
-            cpu    = "100m"
-            memory = "128Mi"
+        }
+      }
+    }
+  }
+
+  depends_on = [module.vpc_connector]
+}
+
+# Batch Service (app tier)
+resource "google_cloud_run_service" "batch_service" {
+  name     = "batch-processor"
+  location = var.region
+  project  = var.project_id
+
+  metadata {
+    labels = {
+      tier = "app"
+      env  = var.env_name
+    }
+  }
+
+  template {
+    metadata {
+      annotations = {
+        # Same VPC connector, different logical service tier
+        "run.googleapis.com/vpc-access-connector" = module.vpc_connector.connector_id
+        "run.googleapis.com/vpc-access-egress"    = "private-ranges-only"
+        "autoscaling.knative.dev/maxScale"       = "5"
+        "autoscaling.knative.dev/minScale"       = "0"  # Scale to zero when no jobs
+      }
+    }
+
+    spec {
+      container_concurrency = 1    # One job per container
+      timeout_seconds      = 900   # 15 minutes for batch processing
+
+      containers {
+        image = "gcr.io/${var.project_id}/batch-processor:latest"
+
+        env {
+          name  = "DB_HOST"
+          value = module.infrastructure.database_dns_custom  # Same database
+        }
+        env {
+          name  = "DB_PORT"
+          value = "1433"
+        }
+        env {
+          name  = "SERVICE_TYPE"
+          value = "batch"
+        }
+        env {
+          name  = "SUBNET_CONTEXT"
+          value = "app-${var.env_name}"
+        }
+        env {
+          name  = "BATCH_SIZE"
+          value = "100"
+        }
+
+        resources {
+          limits = {
+            cpu    = "2000m"  # More resources for batch processing
+            memory = "1Gi"
           }
         }
       }
     }
   }
 
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  depends_on = [
-    module.vpc_connector,
-    module.infrastructure
-  ]
+  depends_on = [module.vpc_connector]
 }
 ```
 
-### 3. gcloud CLI Deployment
+### 4. gcloud CLI Deployments
 
 ```bash
-# Deploy Cloud Run service with VPC connector
-gcloud run deploy my-app \
-  --image=gcr.io/gifted-palace-468618-q5/my-app:latest \
+# Deploy API Service (web tier)
+gcloud run deploy api-service \
+  --image=gcr.io/gifted-palace-468618-q5/api-service:latest \
   --platform=managed \
   --region=us-central1 \
   --vpc-connector=vpc-connector-dev \
   --vpc-egress=private-ranges-only \
-  --set-env-vars="DB_HOST=mydb.myorg.com,DB_PORT=1433,DB_NAME=application_db" \
+  --set-env-vars="DB_HOST=mydb.myorg.com,DB_PORT=1433,SERVICE_TYPE=api,SUBNET_CONTEXT=web-dev" \
   --set-secrets="DB_PASSWORD=db-credentials:latest" \
   --memory=512Mi \
   --cpu=1 \
@@ -184,10 +280,75 @@ gcloud run deploy my-app \
   --max-instances=10 \
   --min-instances=1 \
   --port=8080 \
+  --labels="tier=web,env=dev" \
   --allow-unauthenticated
+
+# Deploy Batch Service (app tier)
+gcloud run deploy batch-processor \
+  --image=gcr.io/gifted-palace-468618-q5/batch-processor:latest \
+  --platform=managed \
+  --region=us-central1 \
+  --vpc-connector=vpc-connector-dev \
+  --vpc-egress=private-ranges-only \
+  --set-env-vars="DB_HOST=mydb.myorg.com,DB_PORT=1433,SERVICE_TYPE=batch,SUBNET_CONTEXT=app-dev,BATCH_SIZE=100" \
+  --set-secrets="DB_PASSWORD=db-credentials:latest" \
+  --memory=1Gi \
+  --cpu=2 \
+  --concurrency=1 \
+  --timeout=900 \
+  --max-instances=5 \
+  --min-instances=0 \
+  --labels="tier=app,env=dev" \
+  --no-allow-unauthenticated  # Batch jobs typically don't need public access
 ```
 
-## 🔐 Database Credentials Management
+## � Network Connectivity Flow
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   API Service   │    │  Batch Service   │    │  VPC Connector  │
+│  (web-dev tier) │    │  (app-dev tier)  │    │ (shared-dev)    │
+│                 │    │                  │    │   10.10.4.0/24  │
+│  Cloud Run      │    │   Cloud Run      │    │                 │
+│  Managed        │    │   Managed        │    │  e2-micro       │
+└─────────┬───────┘    └─────────┬────────┘    │  instances      │
+          │                      │             └─────────┬───────┘
+          │                      │                       │
+          └──────────────────────┼───────────────────────┘
+                                 │
+                          ┌──────▼──────┐
+                          │     VPC     │
+                          │ vpc-core-dev│
+                          │             │
+                          └──────┬──────┘
+                                 │
+                    ┌────────────▼────────────┐
+                    │    db-dev subnet        │
+                    │    10.10.3.0/24        │
+                    │                        │
+                    │  ┌─────────────────┐   │
+                    │  │ PSC Endpoint    │   │
+                    │  │ mydb.myorg.com  │   │
+                    │  │ (Private IP)    │   │
+                    │  └─────────┬───────┘   │
+                    └────────────┼───────────┘
+                                 │
+                         ┌───────▼────────┐
+                         │  Cloud SQL     │
+                         │ SQL Server 2019│
+                         │  (Private)     │
+                         └────────────────┘
+```
+
+**Connectivity Explanation:**
+1. **API & Batch Services** run on Cloud Run managed infrastructure
+2. **VPC Connector** (in `shared-dev` subnet) provides private network bridge
+3. **Both services** connect through VPC connector to access VPC resources
+4. **PSC Endpoint** (in `db-dev` subnet) provides private database access
+5. **DNS Resolution** resolves `mydb.myorg.com` to PSC endpoint IP
+6. **No Public IPs** - all communication is private within VPC
+
+## �🔐 Database Credentials Management
 
 ### 1. Create Secret Manager Secret
 
