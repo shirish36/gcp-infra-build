@@ -6,7 +6,7 @@
 
 | Component | GCP Recommendation | Your Implementation | Status |
 |-----------|-------------------|-------------------|---------|
-| **Connector Subnet** | Dedicated `/28` subnet | `shared-dev (10.10.4.0/24)` | ✅ **COMPLIANT** |
+| **Connector Subnet** | Dedicated `/28` subnet | `vpc-connector-dev (10.10.4.0/28)` | ✅ **COMPLIANT** |
 | **Multi-Service Usage** | Single connector for multiple services | API + Batch services use same connector | ✅ **OPTIMAL** |
 | **Machine Type** | `e2-micro` for development | `e2-micro` configured | ✅ **COST-EFFECTIVE** |
 | **Scaling** | 2-10 instances | `min: 2, max: 3` for dev | ✅ **APPROPRIATE** |
@@ -16,15 +16,59 @@
 
 ### GCP's Recommended Pattern
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    VPC: vpc-core-dev                        │
-├─────────────────────────────────────────────────────────────┤
-│ DMZ Subnet       │ Web Tier        │ App Tier        │ DB Tier        │ Shared Services │
-│ (10.10.0.0/24)   │ (10.10.1.0/24)  │ (10.10.2.0/24)  │ (10.10.3.0/24) │ (10.10.4.0/24)  │
-│                  │                 │                 │                │                 │
-│ Load Balancers   │ 🌐 API Services │ ⚙️ Batch Apps   │ 🗄️ PSC Endpoint│ 🔗 VPC Connector│
-│ (Future)         │ (Logical)       │ (Logical)       │ (Physical)     │ (Physical)      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              VPC: vpc-core-dev                                      │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│ DMZ Subnet       │ Web Tier        │ App Tier        │ DB Tier         │ VPC Connect │
+│ (10.10.0.0/24)   │ (10.10.1.0/24)  │ (10.10.2.0/24)  │ (10.10.3.0/24)  │ (10.10.4.0/28)│
+│                  │                 │                 │                 │             │
+│ Load Balancers   │ 🌐 API Services │ ⚙️ Batch Apps   │ 🗄️ PSC Endpoint │ 🔗 VPC Conn │
+│ (Future)         │ (Cloud Run)     │ (Cloud Run)     │ mydb.myorg.com  │ (e2-micro)  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 📊 **Detailed Communication Flow**
+
+```
+Internet/Users
+     │
+     ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                           Google Cloud Platform                                     │
+│                                                                                     │
+│  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐                   │
+│  │   Web Tier  │         │   App Tier  │         │ VPC Connect │                   │
+│  │web-dev subnet│         │app-dev subnet│         │vpc-connector│                   │
+│  │10.10.1.0/24 │         │10.10.2.0/24 │         │10.10.4.0/28 │                   │
+│  │             │         │             │         │             │                   │
+│  │ 🌐 API      │◄────────┤ ⚙️ Batch    │◄────────┤ 🔗 VPC      │                   │
+│  │   Services  │         │   Apps      │         │   Connector │                   │
+│  │             │         │             │         │ (2-3 inst.) │                   │
+│  │ Cloud Run   │         │ Cloud Run   │         │ e2-micro    │                   │
+│  └─────────────┘         └─────────────┘         └─────────────┘                   │
+│         │                         │                         ▲                     │
+│         │                         │                         │                     │
+│         └─────── Database Requests ────────┐                │                     │
+│                                            │                │                     │
+│                                            ▼                │                     │
+│                                   ┌─────────────┐           │                     │
+│                                   │   DB Tier   │           │                     │
+│                                   │db-dev subnet│           │                     │
+│                                   │10.10.3.0/24 │           │                     │
+│                                   │             │           │                     │
+│                                   │ 🗄️ PSC      │───────────┘                     │
+│                                   │   Endpoint  │                                 │
+│                                   │mydb.myorg.com│                                │
+│                                   │             │                                 │
+│                                   │ Cloud SQL   │                                 │
+│                                   │ SQL Server  │                                 │
+│                                   └─────────────┘                                 │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+🔄 Communication Flow:
+1. API Services (web-dev) → SQL queries → VPC Connector → PSC Endpoint → Cloud SQL
+2. Batch Apps (app-dev) → Data processing → VPC Connector → PSC Endpoint → Cloud SQL  
+3. Professional URL: mydb.myorg.com resolves to PSC endpoint in db-dev subnet
 ```
 
 ### Key Architectural Insights
@@ -47,7 +91,10 @@
 ### Subnet Requirements ✅
 > *"Each Serverless VPC Access connector requires its own /28 subnet to place connector instances on; this subnet must not have any other resources on it other than the connector."*
 
-**Your Implementation:** Dedicated `shared-dev` subnet with /24 CIDR (exceeds minimum requirement)
+**Your Implementation:** Dedicated `vpc-connector-dev` subnet with /28 CIDR (/28 = 16 IPs, 13 usable)
+- **Dev Environment**: 10.10.4.0/28 (dedicated VPC connector subnet)
+- **Prod Environment**: 10.20.4.0/28 (dedicated VPC connector subnet)
+- **Shared Services**: Moved to separate /24 subnets (10.x.5.0/24)
 
 ### Multi-Service Pattern ✅
 > *"You can configure multiple Cloud Run services to use the same VPC connector for cost efficiency and simplified management."*

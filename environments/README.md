@@ -7,10 +7,10 @@
 
 ## 🔗 VPC Connector Configuration
 
-Each environment deploys a VPC connector following GCP best practices:
+Each environment deploys a VPC connector following GCP best practices with dedicated /28 subnets:
 
-- **Dev**: `vpc-connector-dev` in `shared-dev` subnet
-- **Prod**: `vpc-connector-prod` in `shared-prod` subnet
+- **Dev**: `vpc-connector-dev` in dedicated `vpc-connector-dev` subnet (10.10.4.0/28)
+- **Prod**: `vpc-connector-prod` in dedicated `vpc-connector-prod` subnet (10.20.4.0/28)
 
 Both environments use the same GCP-compliant architecture pattern for Cloud Run database connectivity.
 

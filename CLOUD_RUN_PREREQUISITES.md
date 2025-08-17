@@ -13,19 +13,20 @@ The following infrastructure components are automatically created by this Terraf
 ### 1. Network Topology
 ```
 VPC: vpc-core-{env}
-├── dmz-{env}     (10.{env}.0.0/24) - DMZ/Load Balancer tier
-├── web-{env}     (10.{env}.1.0/24) - API services (Cloud Run)
-├── app-{env}     (10.{env}.2.0/24) - Batch applications (Cloud Run)
-├── db-{env}      (10.{env}.3.0/24) - Database tier (PSC endpoint)
-└── shared-{env}  (10.{env}.4.0/24) - Shared services (VPC connector)
+├── dmz-{env}           (10.{env}.0.0/24) - DMZ/Load Balancer tier
+├── web-{env}           (10.{env}.1.0/24) - API services (Cloud Run)
+├── app-{env}           (10.{env}.2.0/24) - Batch applications (Cloud Run)
+├── db-{env}            (10.{env}.3.0/24) - Database tier (PSC endpoint)
+├── vpc-connector-{env} (10.{env}.4.0/28) - VPC connector (GCP /28 requirement)
+└── shared-{env}        (10.{env}.5.0/24) - Shared services
 ```
 
 ### 2. VPC Access Connector (GCP Best Practice Compliant)
 - **Purpose**: Allows Cloud Run to access private VPC resources
 - **Name**: `vpc-connector-{env}`
-- **Subnet**: Uses `shared-{env}` subnet (10.{env}.4.0/24) for connector instances
+- **Subnet**: Uses dedicated `vpc-connector-{env}` subnet (10.{env}.4.0/28) - GCP /28 requirement
 - **Capacity**: 2-3 instances of e2-micro (right-sized for development)
-- **Compliance**: Dedicated subnet, cost-optimized single connector design
+- **Compliance**: Dedicated /28 subnet, cost-optimized single connector design
 - **Access**: Enables secure connectivity to all VPC subnets including `db-{env}`
 
 ### 3. Database PSC Endpoint
@@ -52,7 +53,7 @@ spec:
   template:
     metadata:
       annotations:
-        # REQUIRED: VPC Access Connector (deployed in shared-{env} subnet)
+        # REQUIRED: VPC Access Connector (deployed in vpc-connector-{env} /28 subnet)
         run.googleapis.com/vpc-access-connector: projects/gifted-palace-468618-q5/locations/us-central1/connectors/vpc-connector-dev
         # Route only private traffic through VPC to access db-{env} subnet
         run.googleapis.com/vpc-access-egress: private-ranges-only
@@ -94,7 +95,7 @@ spec:
   template:
     metadata:
       annotations:
-        # REQUIRED: Same VPC connector (shared-{env} subnet)
+        # REQUIRED: Same VPC connector (vpc-connector-{env} /28 subnet)
         run.googleapis.com/vpc-access-connector: projects/gifted-palace-468618-q5/locations/us-central1/connectors/vpc-connector-dev
         # Private connectivity to access db-{env} subnet
         run.googleapis.com/vpc-access-egress: private-ranges-only
@@ -149,7 +150,7 @@ resource "google_cloud_run_service" "api_service" {
   template {
     metadata {
       annotations = {
-        # VPC connector from shared-{env} subnet to access db-{env} subnet
+        # VPC connector from vpc-connector-{env} /28 subnet to access db-{env} subnet
         "run.googleapis.com/vpc-access-connector" = module.vpc_connector.connector_id
         "run.googleapis.com/vpc-access-egress"    = "private-ranges-only"
         "autoscaling.knative.dev/maxScale"       = "10"
@@ -310,8 +311,8 @@ gcloud run deploy batch-processor \
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   API Service   │    │  Batch Service   │    │  VPC Connector  │
-│  (web-dev tier) │    │  (app-dev tier)  │    │ (shared-dev)    │
-│                 │    │                  │    │   10.10.4.0/24  │
+│  (web-dev tier) │    │  (app-dev tier)  │    │(vpc-connector)  │
+│                 │    │                  │    │ 10.10.4.0/28   │
 │  Cloud Run      │    │   Cloud Run      │    │                 │
 │  Managed        │    │   Managed        │    │  e2-micro       │
 └─────────┬───────┘    └─────────┬────────┘    │  instances      │
@@ -345,11 +346,49 @@ gcloud run deploy batch-processor \
 
 **Connectivity Explanation:**
 1. **API & Batch Services** run on Cloud Run managed infrastructure
-2. **VPC Connector** (in `shared-dev` subnet) provides private network bridge
+2. **VPC Connector** (in dedicated `vpc-connector-dev` /28 subnet) provides private network bridge
 3. **Both services** connect through VPC connector to access VPC resources
 4. **PSC Endpoint** (in `db-dev` subnet) provides private database access
 5. **DNS Resolution** resolves `mydb.myorg.com` to PSC endpoint IP
 6. **No Public IPs** - all communication is private within VPC
+
+### 📊 **Enhanced Multi-Tier Architecture Diagram**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              VPC: vpc-core-dev                                      │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                     │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
+│ │   DMZ Tier  │ │   Web Tier  │ │   App Tier  │ │ VPC Connect │ │   DB Tier   │   │
+│ │10.10.0.0/24 │ │10.10.1.0/24 │ │10.10.2.0/24 │ │10.10.4.0/28 │ │10.10.3.0/24 │   │
+│ │             │ │             │ │             │ │             │ │             │   │
+│ │ 🌐 Future   │ │ 🌐 API      │ │ ⚙️ Batch    │ │ 🔗 VPC      │ │ 🗄️ PSC      │   │
+│ │ Load Balancer│ │ Services    │ │ Apps        │ │ Connector   │ │ Endpoint    │   │
+│ │ (Planned)   │ │ Cloud Run   │ │ Cloud Run   │ │ e2-micro    │ │mydb.myorg.com│   │
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │
+│                          │               │               ▲               ▲       │
+│                          │               │               │               │       │
+│                          └───────────────┼───────────────┘               │       │
+│                                          │                               │       │
+│                                          └──── Database Access ──────────┘       │
+│                                              (Professional URL)                   │
+│ ┌─────────────┐                                                                   │
+│ │ Shared Svcs │                                                                   │
+│ │10.10.5.0/24 │                                                                   │
+│ │             │                                                                   │
+│ │ 🔧 Shared   │                                                                   │
+│ │ Services    │                                                                   │
+│ │ (Future)    │                                                                   │
+│ └─────────────┘                                                                   │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+🔄 Communication Path Details:
+1. API Services → VPC Connector (10.10.4.0/28) → PSC Endpoint → Cloud SQL
+2. Batch Apps → VPC Connector (10.10.4.0/28) → PSC Endpoint → Cloud SQL
+3. Professional URL: mydb.myorg.com resolves to PSC private IP in db-dev subnet
+4. VPC Connector: Dedicated /28 subnet with 2-3 e2-micro instances (GCP requirement)
+```
 
 ## �🔐 Database Credentials Management
 
