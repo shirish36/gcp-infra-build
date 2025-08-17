@@ -1,6 +1,6 @@
 terraform {
   backend "gcs" {
-    bucket  = "tfstate-bucket-your-project-id" # Change to your bucket name
+    bucket  = "tfstate-bucket-283962084457" # Change to your bucket name
     prefix  = "terraform/state/${var.env_name}"
   }
 }
