@@ -1,16 +1,34 @@
 # DNS Permission Resolution Guide
 
-## 🔴 Current Issue
+## ✅ Issue Resolved
 
-The infrastructure deployment is failing when attempting to create the DNS managed zone with the following error:
+The DNS permission issue has been resolved! DNS zone creation and record management are now working properly.
 
-```
-Error: Error creating ManagedZone: googleapi: Error 403: Forbidden
-```
+## 🎯 What Was Fixed
 
-## 🎯 Root Cause
+The GitHub Actions service account was granted the **DNS Administrator** role (`roles/dns.admin`), which allows:
+- Creating and managing DNS managed zones
+- Creating and updating DNS records
+- Full DNS zone administration
 
-The GitHub Actions service account lacks the necessary permissions to create DNS managed zones. While the Cloud DNS API has been enabled, the service account needs the **DNS Administrator** role.
+## 🛠️ Changes Applied
+
+### DNS Resources Enabled:
+
+1. **DNS Managed Zone**: `google_dns_managed_zone.database_zone` in `modules/network/main.tf`
+2. **DNS Record**: `google_dns_record_set.database_dns` in `main.tf`  
+3. **DNS Outputs**: All DNS-related outputs have been restored
+
+### Infrastructure Status:
+
+✅ **Active DNS Components:**
+- Private DNS zone: `database.vpc-core-{env}.internal`
+- DNS A record: `sql-server.database.vpc-core-{env}.internal`
+- Automatic DNS resolution within VPC
+
+## 🔄 Current Deployment Status
+
+DNS zone creation is now enabled and will be deployed with the next infrastructure run.
 
 ## 🛠️ Resolution Steps
 

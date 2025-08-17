@@ -49,10 +49,7 @@ module "psc_endpoint" {
   psc_service_attachment_link = module.cloud_sql.psc_service_attachment_link
 }
 
-# DNS record for database access - COMMENTED OUT DUE TO DNS ZONE PERMISSION ISSUES
-# Use PSC endpoint IP directly for database connections
-# Alternative: Manually create DNS record once DNS Administrator role is granted
-/*
+# DNS record for database access
 resource "google_dns_record_set" "database_dns" {
   name         = "sql-server.database.${var.network.name}.internal."
   managed_zone = module.network.database_zone_name
@@ -64,4 +61,3 @@ resource "google_dns_record_set" "database_dns" {
 
   depends_on = [module.network, module.psc_endpoint]
 }
-*/
