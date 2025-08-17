@@ -4,11 +4,12 @@ module "project_apis" {
 }
 
 module "network" {
-  source     = "./modules/network"
-  project_id = var.project_id
-  network    = var.network
-  region     = var.region
-  labels     = var.labels
+  source        = "./modules/network"
+  project_id    = var.project_id
+  network       = var.network
+  region        = var.region
+  labels        = var.labels
+  custom_domain = var.custom_domain
 
   depends_on = [module.project_apis]
 }
@@ -79,6 +80,19 @@ resource "google_dns_record_set" "database_short_dns" {
 resource "google_dns_record_set" "database_simple_dns" {
   name         = "sqlserver.database.${var.network.name}.internal."
   managed_zone = module.network.database_zone_name
+  type         = "A"
+  ttl          = 300
+  project      = var.project_id
+
+  rrdatas = [module.psc_endpoint.psc_ip_address]
+
+  depends_on = [module.network, module.psc_endpoint]
+}
+
+# Custom domain DNS record for easy access (mydb.myorg.com)
+resource "google_dns_record_set" "database_custom_dns" {
+  name         = "${var.custom_domain.db_hostname}.${var.custom_domain.domain_name}."
+  managed_zone = module.network.custom_domain_zone_name
   type         = "A"
   ttl          = 300
   project      = var.project_id

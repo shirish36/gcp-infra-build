@@ -42,3 +42,15 @@ variable "cloud_sql" {
   })
   sensitive = true
 }
+
+variable "custom_domain" {
+  description = "Custom domain configuration for database DNS."
+  type = object({
+    domain_name = string
+    db_hostname = string
+  })
+  default = {
+    domain_name = "myorg.com"
+    db_hostname = "mydb"
+  }
+}

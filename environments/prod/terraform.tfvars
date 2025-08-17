@@ -21,3 +21,8 @@ cloud_sql = {
   tier          = "db-custom-4-7680"
   root_password = "Pr0dSecureP@ssw0rd456!"
 }
+
+custom_domain = {
+  domain_name = "myorg.com"
+  db_hostname = "mydb-prod"
+}

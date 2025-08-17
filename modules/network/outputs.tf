@@ -29,3 +29,13 @@ output "database_zone_dns_name" {
   description = "The DNS name of the private zone for database access."
   value       = google_dns_managed_zone.database_zone.dns_name
 }
+
+output "custom_domain_zone_name" {
+  description = "The name of the custom domain DNS zone."
+  value       = google_dns_managed_zone.custom_domain_zone.name
+}
+
+output "custom_domain_zone_dns_name" {
+  description = "The DNS name of the custom domain zone."
+  value       = google_dns_managed_zone.custom_domain_zone.dns_name
+}

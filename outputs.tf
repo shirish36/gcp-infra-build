@@ -53,9 +53,19 @@ output "database_dns_simple" {
   value       = "sqlserver.database.${var.network.name}.internal"
 }
 
+output "database_dns_custom" {
+  description = "Custom domain DNS name for database access."
+  value       = "${var.custom_domain.db_hostname}.${var.custom_domain.domain_name}"
+}
+
 output "database_zone_name" {
   description = "The private DNS zone name for database access."
   value       = module.network.database_zone_name
+}
+
+output "custom_domain_zone_name" {
+  description = "The custom domain DNS zone name."
+  value       = module.network.custom_domain_zone_name
 }
 
 output "gcs_bucket_name" {

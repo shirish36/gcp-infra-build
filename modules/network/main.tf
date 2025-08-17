@@ -55,3 +55,21 @@ resource "google_dns_managed_zone" "database_zone" {
 
   labels = var.labels
 }
+
+# Custom DNS zone for your organization domain
+resource "google_dns_managed_zone" "custom_domain_zone" {
+  name        = "${var.network.name}-custom-domain-zone"
+  dns_name    = "${var.custom_domain.domain_name}."
+  description = "Private DNS zone for custom domain names within ${var.network.name}"
+  project     = var.project_id
+
+  visibility = "private"
+
+  private_visibility_config {
+    networks {
+      network_url = google_compute_network.vpc.id
+    }
+  }
+
+  labels = var.labels
+}
