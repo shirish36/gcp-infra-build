@@ -1,11 +1,11 @@
 module "network" {
-  source         = "./modules/network"
-  project_id     = var.project_id
-  vpc_name       = "main-vpc"
-  vpc_description = "Main VPC"
-  subnet_name    = "main-subnet"
-  subnet_cidr    = "10.30.0.0/24"
-  region         = var.region
+  source             = "./modules/network"
+  project_id         = var.project_id
+  vpc_name           = "main-vpc"
+  vpc_description    = "Main VPC"
+  subnet_name        = "main-subnet"
+  subnet_cidr        = "10.30.0.0/24"
+  region             = var.region
   subnet_description = "Main subnet"
 }
 
