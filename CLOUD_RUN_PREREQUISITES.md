@@ -2,7 +2,9 @@
 
 ## 🎯 Overview
 
-This guide provides all the prerequisites and configuration needed for Cloud Run applications to access your database using the custom domain `mydb.myorg.com`.
+This guide provides all the prerequisites and configuration needed for Cloud Run applications to access your database using the custom domain `mydb.myorg.com`. 
+
+**✅ GCP Best Practice Compliant**: Our VPC connector configuration follows Google Cloud's official best practices. See `VPC_CONNECTOR_BEST_PRACTICES.md` for detailed compliance analysis.
 
 ## 🏗️ Infrastructure Prerequisites (Automatically Deployed)
 
@@ -18,12 +20,13 @@ VPC: vpc-core-{env}
 └── shared-{env}  (10.{env}.4.0/24) - Shared services (VPC connector)
 ```
 
-### 2. VPC Access Connector
+### 2. VPC Access Connector (GCP Best Practice Compliant)
 - **Purpose**: Allows Cloud Run to access private VPC resources
 - **Name**: `vpc-connector-{env}`
 - **Subnet**: Uses `shared-{env}` subnet (10.{env}.4.0/24) for connector instances
-- **Capacity**: 2-3 instances of e2-micro
-- **Access**: Enables connectivity to all VPC subnets including `db-{env}`
+- **Capacity**: 2-3 instances of e2-micro (right-sized for development)
+- **Compliance**: Dedicated subnet, cost-optimized single connector design
+- **Access**: Enables secure connectivity to all VPC subnets including `db-{env}`
 
 ### 3. Database PSC Endpoint
 - **Location**: `db-{env}` subnet (10.{env}.3.0/24)
