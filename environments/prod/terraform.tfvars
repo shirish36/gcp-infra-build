@@ -16,13 +16,6 @@ network = {
   ]
 }
 
-psc_db_subnet_name = "db-prod"
-
-vpc_connector = {
-  name          = "run-conn-usc1-prod"
-  ip_cidr_range = "10.20.8.0/28"
-}
-
 cloud_sql = {
   instance_name = "sql-std-prod"
   tier          = "db-custom-4-7680"

@@ -3,6 +3,11 @@ variable "project_id" {
   type        = string
 }
 
+variable "env_name" {
+  description = "Environment name (dev, prod, etc.)"
+  type        = string
+}
+
 variable "region" {
   description = "The region to deploy resources."
   type        = string
@@ -25,19 +30,6 @@ variable "network" {
       ip_cidr_range = string
       region        = string
     }))
-  })
-}
-
-variable "psc_db_subnet_name" {
-  description = "The name of the subnet to use for PSC database connection."
-  type        = string
-}
-
-variable "vpc_connector" {
-  description = "VPC connector configuration."
-  type = object({
-    name          = string
-    ip_cidr_range = string
   })
 }
 
