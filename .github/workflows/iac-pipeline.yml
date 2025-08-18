@@ -8,6 +8,21 @@ on:
   pull_request:
     branches:
       - feature-exp
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: 'dev'
+        type: string
 permissions:
   id-token: write
   contents: read
@@ -43,8 +58,11 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan (Development)
+        if: github.event.inputs.action == 'plan' || github.event_name != 'workflow_dispatch'
         run: terraform plan -var-file=environments/dev/terraform.tfvars -input=false -lock-timeout=10m
 
       - name: Terraform Apply (Development)
-        if: github.ref == 'refs/heads/feature-exp' && github.event_name == 'push'
+        if: |
+          (github.ref == 'refs/heads/feature-exp' && github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
         run: terraform apply -auto-approve -var-file=environments/dev/terraform.tfvars -input=false -lock-timeout=10m
